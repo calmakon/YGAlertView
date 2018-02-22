@@ -28,18 +28,22 @@
 
 -(void)addClick
 {
-    [YGAlertView showAlertViewWithMassage:@"提示" cancelTitle:@"取消" sureTitle:@"确定" delegate:self];
+    // [YGAlertView showAlertViewWithMassage:@"提示提示" cancelTitle:@"取消" sureTitle:@"确定" delegate:self];
     //[self performSelector:@selector(missClick) withObject:self afterDelay:2];
+    [YGAlertView showLoadingWithMassage:@"加载中..."];
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        [YGAlertView showTextWithMassage:@"没有数据!"];
+    });
 }
 
 -(void)missClick
 {
-    [YGAlertView HudDismiss];
+    [YGAlertView hudDismiss];
 }
 
--(void)ygAlertView:(YGAlertView *)alertView didClickedButtonAtIndex:(NSInteger)buttonIndex
+-(void)yg_alertView:(YGAlertView *)alertView didClickedButtonAtIndex:(NSInteger)buttonIndex
 {
-    
+    [YGAlertView showTextWithMassage:@"提示提示提示提示提示提示提示提示提示提示提示提示提示提示提示提示提示提示提示提示提示提示提示提示提示提示"];
 }
 
 - (void)didReceiveMemoryWarning {

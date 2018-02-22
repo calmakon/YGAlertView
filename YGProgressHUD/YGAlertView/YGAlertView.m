@@ -9,140 +9,165 @@
 #import "YGAlertView.h"
 
 #define alertWidth 260
-#define alertDefoultHeight 140
+#define hudDefaultHeight 44
+#define alertDefaultHeight 140
+#define animationDuratuin 0.2
 
-static YGAlertView *hudAlert = nil;
+typedef NS_ENUM(NSInteger,YGAlertViewType) {
+    YGAlertViewTypeAlert = 0,
+    YGAlertViewTypeLoading,
+    YGAlertViewTypeTip
+};
+
+@interface YGAlertView ()
+{
+    YGAlertViewType _currentType;
+    UIView * _currentView;
+}
+/**
+ * 弹出时背景
+ */
+@property(nonatomic,strong)UIView * darkView;
+/**
+ * 弹出视图
+ */
+@property(nonatomic,strong)UIView * alertView;
+/**
+ * HUD弹出视图
+ */
+@property(nonatomic,strong)UIView * hudView;
+/**
+ * LoadingView转圈视图
+ */
+@property(nonatomic,strong)HYCircleLoadingView * LoadingView;
+/**
+ * 取消按钮
+ */
+@property(nonatomic,strong)UIButton * cancelBtn;
+/**
+ * 确认按钮
+ */
+@property(nonatomic,strong)UIButton * sureBtn;
+/**
+ * 内容label
+ */
+@property(nonatomic,strong)UILabel * massageLabel;
+
+@end
 
 @implementation YGAlertView
 
 - (id)initWithFrame:(CGRect)frame {
-    
+
     if (self = [super initWithFrame:frame]) {
         [self addSubview:self.darkView];
     }
-    
+
     return self;
 }
 
 +(YGAlertView *)defoultAlert
 {
-    if (!hudAlert) {
+    static YGAlertView * alert = nil;
+    if (!alert) {
         static dispatch_once_t onceToken;
         dispatch_once(&onceToken, ^{
-            hudAlert = [[YGAlertView alloc] initWithFrame:(CGRect){0, 0, [UIScreen mainScreen].bounds.size}];
+            alert = [[YGAlertView alloc] initWithFrame:(CGRect){0, 0, [UIScreen mainScreen].bounds.size}];
         });
     }
-    return hudAlert;
+    return alert;
 }
 
 +(void)showAlertViewWithMassage:(NSString *)massage cancelTitle:(NSString *)cancelTitle sureTitle:(NSString *)sureTitle delegate:(id<YGAlertViewDelegate>)delegate
 {
-    YGAlertView * alertView = [[YGAlertView alloc] initWithMassage:massage cancelTitle:cancelTitle sureTitle:sureTitle delegate:delegate];
-    
+    YGAlertView * alertView = [YGAlertView defoultAlert];
+    [alertView initWithType:YGAlertViewTypeAlert massage:massage cancelTitle:cancelTitle sureTitle:sureTitle delegate:delegate];
     [alertView showAlert];
 }
 
-+(void)showHudViewWithMassage:(NSString *)massage
++(void)showLoadingWithMassage:(NSString *)massage
 {
-    
     YGAlertView * alertView = [YGAlertView defoultAlert];;
-    [alertView initWithMassage:massage isLoad:YES];
-    
-    [alertView showHud:YES];
+    [alertView initWithType:YGAlertViewTypeLoading massage:massage cancelTitle:nil sureTitle:nil delegate:nil];
+
+    [alertView showHud];
 }
 
-+(void)showPromptViewWithMassage:(NSString *)massage
++(void)showTextWithMassage:(NSString *)massage
 {
     YGAlertView * alertView = [YGAlertView defoultAlert];
-    [alertView initWithMassage:massage isLoad:NO];
-    
-    [alertView showHud:NO];
+    [alertView initWithType:YGAlertViewTypeTip massage:massage cancelTitle:nil sureTitle:nil delegate:nil];
+
+    [alertView showHud];
 }
 
-+(void)HudDismiss
++(void)hudDismiss
 {
-    [[YGAlertView defoultAlert] hudDismiss];
+    [[YGAlertView defoultAlert] dismiss];
 }
 
--(void)showHud:(BOOL)isLoad
-{
-    self.hudView.center = CGPointMake(self.center.x, self.center.y);
-    self.hudView.alpha = 0;
-    
-    [UIView animateWithDuration:0.2 animations:^{
-        self.hudView.center = CGPointMake(self.center.x, self.center.y-self.hudView.frame.size.height/2);
-        self.hudView.alpha = 1;
+- (void)showAlert {
+    [self show:self.alertView];
+}
+
+- (void)showHud {
+    [self show:self.hudView];
+}
+
+- (void)show:(UIView *)currentView {
+    [[UIApplication sharedApplication].keyWindow addSubview:self];
+    currentView.center = CGPointMake(self.center.x, self.center.y);
+    currentView.alpha = 0;
+    [UIView animateWithDuration:animationDuratuin animations:^{
+        currentView.center = CGPointMake(self.center.x, self.center.y - currentView.frame.size.height/2);
+        currentView.alpha = 1;
         self.darkView.alpha = 0.3;
     }];
-    // [self bringSubviewToFront:self.hudView];
-    if (!isLoad) {
-        [self performSelector:@selector(hudDismiss) withObject:nil afterDelay:1.5];
+    if (_currentType == YGAlertViewTypeTip) {
+        [self performSelector:@selector(dismiss) withObject:nil afterDelay:1.5];
     }
 }
 
--(void)showAlert
-{
-    self.alertView.center = CGPointMake(self.center.x, self.center.y);
-    self.alertView.alpha = 0;
-    [UIView animateWithDuration:0.2 animations:^{
-        self.alertView.center = CGPointMake(self.center.x, self.center.y-self.alertView.frame.size.height/2);
-        self.alertView.alpha = 1;
-        self.darkView.alpha = 0.3;
-    }];
-    // [self bringSubviewToFront:self.alertView];
-}
-
--(void)alertDismiss
-{
-    [UIView animateWithDuration:0.2 animations:^{
-        self.alertView.center = CGPointMake(self.center.x, self.center.y);
-        self.alertView.alpha = 0;
+- (void)dismiss {
+    [UIView animateWithDuration:animationDuratuin animations:^{
+        _currentView.center = CGPointMake(self.center.x, self.center.y);
+        _currentView.alpha = 0;
         self.darkView.alpha = 0;
     } completion:^(BOOL finished) {
+        if (_currentType == YGAlertViewTypeLoading) {
+            [self.LoadingView stopAnimation];
+        }
         [self removeFromSuperview];
     }];
 }
 
--(void)hudDismiss
-{
-    [UIView animateWithDuration:0.2 animations:^{
-        self.hudView.center = CGPointMake(self.center.x, self.center.y);
-        self.hudView.alpha = 0;
-        self.darkView.alpha = 0;
-    } completion:^(BOOL finished) {
-        [self.LoadingView stopAnimation];
-        [self removeFromSuperview];
-    }];
-}
-
--(id)initWithMassage:(NSString *)massage cancelTitle:(NSString *)cancelTitle sureTitle:(NSString *)sureTitle delegate:(id<YGAlertViewDelegate>)delegate
-{
-    if (self = [self init]) {
-        [self addSubview:self.darkView];
+- (void)initWithType:(YGAlertViewType)type massage:(NSString *)massage cancelTitle:(NSString *)cancelTitle sureTitle:(NSString *)sureTitle delegate:(id<YGAlertViewDelegate>)delegate{
+    _currentType = type;
+    if (type == YGAlertViewTypeAlert) {
         self.delegate = delegate;
-        
+
         CGSize massageSize = [self getSizeFromString:massage];
         self.massageLabel.text = massage;
         self.massageLabel.frame = CGRectMake(20, 20, alertWidth-40, massageSize.height);
         [self.alertView addSubview:self.massageLabel];
-        
+
         UIView * lineView = [UIView new];
         lineView.backgroundColor = [UIColor colorWithRed:0.94 green:0.94 blue:0.94 alpha:1];
         lineView.frame = CGRectMake(0, CGRectGetMaxY(self.massageLabel.frame)+20, alertWidth, 1);
-        
+
         UIView * lineView2 = [UIView new];
         lineView2.backgroundColor = [UIColor colorWithRed:0.94 green:0.94 blue:0.94 alpha:1];
         lineView2.frame = CGRectMake(alertWidth/2, CGRectGetMaxY(self.massageLabel.frame)+20, 1, 44);
-        
+
         [self.alertView addSubview:lineView];
         [self.alertView addSubview:lineView2];
-        
+
         self.alertView.bounds = CGRectMake(0, 0, alertWidth, CGRectGetMaxY(lineView2.frame));
-        
+
         if (cancelTitle && sureTitle) {
             self.cancelBtn.frame = CGRectMake(0, CGRectGetMaxY(self.massageLabel.frame)+21, alertWidth/2, 43);
             [self.cancelBtn setTitle:cancelTitle forState:UIControlStateNormal];
-            
+
             self.sureBtn.frame = CGRectMake(alertWidth/2, CGRectGetMaxY(self.massageLabel.frame)+21, alertWidth/2, 43);
             [self.sureBtn setTitle:sureTitle forState:UIControlStateNormal];
             [self.alertView addSubview:self.cancelBtn];
@@ -159,12 +184,38 @@ static YGAlertView *hudAlert = nil;
             [self.alertView addSubview:self.sureBtn];
             lineView2.hidden = YES;
         }
-        
-        self.frame = (CGRect){0, 0, [UIScreen mainScreen].bounds.size};
-        [[UIApplication sharedApplication].keyWindow addSubview:self];
+        _currentView = self.alertView;
     }
-    
-    return self;
+    if (type == YGAlertViewTypeLoading ||
+        type == YGAlertViewTypeTip) {
+        [self.hudView addSubview:self.massageLabel];
+        if (type == YGAlertViewTypeLoading) {
+            [self.hudView addSubview:self.LoadingView];
+            self.hudView.bounds = CGRectMake(0, 0, alertWidth / 2.0f, hudDefaultHeight);
+            self.LoadingView.center = CGPointMake(self.LoadingView.center.x, hudDefaultHeight / 2.0f);
+            [self.LoadingView startAnimation];
+            self.massageLabel.frame = CGRectMake(CGRectGetMaxX(self.LoadingView.frame)+10, 10, self.hudView.bounds.size.width - 40 - 10, 24);
+            self.massageLabel.textAlignment = NSTextAlignmentLeft;
+            self.massageLabel.text = massage;
+        }else {
+            [self.LoadingView stopAnimation];
+            [self.LoadingView removeFromSuperview];
+            CGSize massageSize = [self getSizeFromString:massage];
+            self.massageLabel.frame = CGRectMake(20, 10, massageSize.width, massageSize.height);
+            self.massageLabel.textAlignment = NSTextAlignmentCenter;
+            self.massageLabel.text = massage;
+            self.hudView.bounds = CGRectMake(0, 0, alertWidth, CGRectGetMaxY(self.massageLabel.frame) + 10);
+            self.massageLabel.center = CGPointMake(alertWidth / 2.0f, self.hudView.bounds.size.height / 2.0f);
+        }
+        _currentView = self.hudView;
+    }
+}
+
+-(void)initWithMassage:(NSString *)massage cancelTitle:(NSString *)cancelTitle sureTitle:(NSString *)sureTitle delegate:(id<YGAlertViewDelegate>)delegate
+{
+    YGAlertView * alertView = [YGAlertView defoultAlert];
+    [alertView initWithType:YGAlertViewTypeAlert massage:massage cancelTitle:cancelTitle sureTitle:sureTitle delegate:delegate];
+    [alertView showAlert];
 }
 
 -(void)setAlertViewCenter:(CGPoint)center
@@ -177,34 +228,19 @@ static YGAlertView *hudAlert = nil;
     self.hudView.center = center;
 }
 
--(void)initWithMassage:(NSString *)massage isLoad:(BOOL)isLoad
-{
-    if (isLoad) {
-        [self.hudView addSubview:self.LoadingView];
-        [self.LoadingView startAnimation];
-        self.massageLabel.frame = CGRectMake(CGRectGetMaxX(self.LoadingView.frame)+10, 10, alertWidth-40-55, 20);
-        self.massageLabel.textAlignment = NSTextAlignmentLeft;
-    }else{
-        self.massageLabel.frame = CGRectMake(20, 10, alertWidth-80, 20);
-        self.massageLabel.textAlignment = NSTextAlignmentCenter;
-    }
-    self.massageLabel.text = massage;
-    [self.hudView addSubview:self.massageLabel];
-    
-    [[UIApplication sharedApplication].keyWindow addSubview:self];
-}
-
 -(void)buttonClick:(UIButton *)sender
 {
     if (sender.tag == 100) {
         //取消消失
-        [self alertDismiss];
+        [self dismiss];
     }else{
         //确认
-        [self alertDismiss];
-        if ([self.delegate respondsToSelector:@selector(ygAlertView:didClickedButtonAtIndex:)]) {
-            [self.delegate ygAlertView:self didClickedButtonAtIndex:sender.tag];
-        }
+        [self dismiss];
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(animationDuratuin * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            if ([self.delegate respondsToSelector:@selector(yg_alertView:didClickedButtonAtIndex:)]) {
+                [self.delegate yg_alertView:self didClickedButtonAtIndex:sender.tag];
+            }
+        });
     }
 }
 
@@ -227,7 +263,7 @@ static YGAlertView *hudAlert = nil;
         _alertView.layer.shadowColor = [UIColor lightGrayColor].CGColor;
         _alertView.layer.shadowOffset = CGSizeMake(2, 1);
         _alertView.layer.shadowOpacity = 1;
-        _alertView.bounds = CGRectMake(0, 0, alertWidth, alertDefoultHeight);
+        _alertView.bounds = CGRectMake(0, 0, alertWidth, alertDefaultHeight);
         [self addSubview:_alertView];
     }
     return _alertView;
@@ -267,7 +303,7 @@ static YGAlertView *hudAlert = nil;
         _hudView.layer.shadowColor = [UIColor lightGrayColor].CGColor;
         _hudView.layer.shadowOffset = CGSizeMake(2, 1);
         _hudView.layer.shadowOpacity = 1;
-        _hudView.bounds = CGRectMake(0, 0, alertWidth-40, 40);
+        _hudView.bounds = CGRectMake(0, 0, alertWidth, hudDefaultHeight);
         [self addSubview:_hudView];
     }
     return _hudView;
@@ -288,7 +324,7 @@ static YGAlertView *hudAlert = nil;
 -(HYCircleLoadingView *)LoadingView
 {
     if (!_LoadingView) {
-        _LoadingView = [[HYCircleLoadingView alloc] initWithFrame:CGRectMake(30, 12, 15, 15)];/*可自行修改大小、颜色*/
+        _LoadingView = [[HYCircleLoadingView alloc] initWithFrame:CGRectMake(20, 14, 15, 15)];/*可自行修改大小、颜色*/
         _LoadingView.lineColor = [UIColor colorWithRed:0.21 green:0.64 blue:0.85 alpha:1];
         _LoadingView.lineWidth = 1;
     }
@@ -298,15 +334,16 @@ static YGAlertView *hudAlert = nil;
 -(CGSize)getSizeFromString:(NSString*)_theString
 {
     CGSize size = CGSizeMake(alertWidth-40, MAXFLOAT);
-    
+
     CGSize tempSize = [_theString boundingRectWithSize:size options:NSStringDrawingUsesLineFragmentOrigin attributes:@{NSFontAttributeName:[UIFont systemFontOfSize:15]} context:nil].size;
     return tempSize;
 }
 
 -(void)dealloc
 {
-    
+
 }
 
 
 @end
+

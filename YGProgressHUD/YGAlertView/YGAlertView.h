@@ -11,48 +11,17 @@
 
 @class YGAlertView;
 @protocol YGAlertViewDelegate <NSObject>
-
 @optional
 
 /**
  * 点击了buttonIndex处的按钮
  */
-- (void)ygAlertView:(YGAlertView *)alertView didClickedButtonAtIndex:(NSInteger)buttonIndex;
+- (void)yg_alertView:(YGAlertView *)alertView didClickedButtonAtIndex:(NSInteger)buttonIndex;
 
 @end
+
 @interface YGAlertView : UIView
-/**
- * 弹出时背景
- */
-@property(nonatomic,strong)UIView * darkView;
-/**
- * 弹出视图
- */
-@property(nonatomic,strong)UIView * alertView;
-/**
- * HUD弹出视图
- */
-@property(nonatomic,strong)UIView * hudView;
-/**
- * LoadingView转圈视图
- */
-@property(nonatomic,strong)HYCircleLoadingView * LoadingView;
-/**
- * 取消按钮
- */
-@property(nonatomic,strong)UIButton * cancelBtn;
-/**
- * 确认按钮
- */
-@property(nonatomic,strong)UIButton * sureBtn;
-/**
- * 内容label
- */
-@property(nonatomic,strong)UILabel * massageLabel;
-///**
-// * 内容文字
-// */
-//@property(nonatomic,copy) NSString * massage;
+
 /**
  * 点击事件代理
  * index
@@ -67,13 +36,13 @@
 /**
  * 弹出loadingHUD视图调用方法
  */
-+(void)showHudViewWithMassage:(NSString *)massage;
++ (void)showLoadingWithMassage:(NSString *)massage;
 /**
  * 弹出提示View,随后消失
  */
-+(void)showPromptViewWithMassage:(NSString *)massage;
++ (void)showTextWithMassage:(NSString *)massage;
 /**
  * 销毁loadingView
  */
-+(void)HudDismiss;
++ (void)hudDismiss;
 @end
